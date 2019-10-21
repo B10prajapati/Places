@@ -4,8 +4,10 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -13,9 +15,11 @@ import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.PhotoMetadata;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.model.PlaceLikelihood;
 import com.google.android.libraries.places.api.model.TypeFilter;
+import com.google.android.libraries.places.api.net.FetchPhotoRequest;
 import com.google.android.libraries.places.api.net.FetchPlaceRequest;
 import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest;
 import com.google.android.libraries.places.api.net.FindCurrentPlaceResponse;
@@ -47,6 +51,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView textView2;
 
     private PlacesClient placesClient;
+
+    private ImageView imageView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,10 +63,12 @@ public class MainActivity extends AppCompatActivity {
                 .withPermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 .withListener(new PermissionListener() {
                     @Override
-                    public void onPermissionGranted(PermissionGrantedResponse response) {
+                    public void onPermissionGranted(PermissionGrantedResponse permissionGrantedResponse) {
 
                         textView = (TextView) findViewById(R.id.textView);
                         textView2 = (TextView) findViewById(R.id.textView2);
+
+                        imageView = (ImageView) findViewById(R.id.imageView2);
 
                         // Initialize the SDK
                         Places.initialize(getApplicationContext(), apiKey);
@@ -75,10 +83,10 @@ public class MainActivity extends AppCompatActivity {
                         List<Place.Field> placeFields = Collections.singletonList(Place.Field.NAME);
 
                         // Use the builder to create a FindCurrentPlaceRequest.
-                        FindCurrentPlaceRequest request =
+                        FindCurrentPlaceRequest findCurrentPlaceRequest =
                                 FindCurrentPlaceRequest.newInstance(placeFields);
 
-                        Task<FindCurrentPlaceResponse> placeResponse = placesClient.findCurrentPlace(request);
+                        Task<FindCurrentPlaceResponse> placeResponse = placesClient.findCurrentPlace(findCurrentPlaceRequest);
                         placeResponse.addOnCompleteListener(task -> {
 
                             String logMessage = "";
@@ -106,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
                                 textView2.setText(logMessage);
                             }
                         });
-
+/***************************************************************************/
 
 
 
@@ -115,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
 
 
 /**************************AUTOComplete Searc BAr*********************/
+/*
 
                         // Initialize the AutocompleteSupportFragment
                         AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
@@ -144,28 +153,79 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
 
+
+*/
+/***************************************************************************/
+
+
+
                         // Define a Place ID.
-                        String placeId = "Bhaktapur";
-/*
-// Specify the fields to return.
-        List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME);
+                        String placeId = "ChIJoWuAQq4a6zkRgl5OQHngSVQ"; //Place id for bhaktapur
 
-// Construct a request object, passing the place ID and fields array.
-        FetchPlaceRequest request = FetchPlaceRequest.newInstance(placeId, placeFields);
+/***************************Place Detail**********************/
+                        // Specify the fields to return.
+                        List<Place.Field> placeFieldsDetails = Arrays.asList(Place.Field.ID, Place.Field.NAME);
 
-        placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
-            Place place = response.getPlace();
-            textView2.setText("Place found: " + place.getName());
-            Log.i(TAG, "Place found: " + place.getName());
-        }).addOnFailureListener((exception) -> {
-            if (exception instanceof ApiException) {
-                ApiException apiException = (ApiException) exception;
-                int statusCode = apiException.getStatusCode();
-                // Handle error with given status code.
-                textView2.setText("Place not found: " + exception.getMessage());
-                Log.e(TAG, "Place not found: " + exception.getMessage());
-            }
-        });*/
+                        // Construct a request object, passing the place ID and fields array.
+                        FetchPlaceRequest request = FetchPlaceRequest.newInstance(placeId, placeFieldsDetails);
+
+                        placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
+                            Place place = response.getPlace();
+                            textView.setText("Place found: " + place.getName());
+                            Log.i(TAG, "Place found: " + place.getName());
+                        }).addOnFailureListener((exception) -> {
+                            if (exception instanceof ApiException) {
+                                ApiException apiException = (ApiException) exception;
+                                int statusCode = apiException.getStatusCode();
+                                // Handle error with given status code.
+                                textView.setText("Place not found: " + exception.getMessage());
+                                Log.e(TAG, "Place not found: " + exception.getMessage());
+                            }
+                        });
+
+/***************************************************************************/
+
+
+
+
+/**********************Place Photo*************************/
+
+
+// Specify fields. Requests for photos must always have the PHOTO_METADATAS field.
+                        List<Place.Field> fields = Arrays.asList(Place.Field.PHOTO_METADATAS);
+
+// Get a Place object (this example uses fetchPlace(), but you can also use findCurrentPlace())
+                        FetchPlaceRequest placeRequest = FetchPlaceRequest.newInstance(placeId, fields);
+
+                        placesClient.fetchPlace(placeRequest).addOnSuccessListener((response) -> {
+                            Place place = response.getPlace();
+
+                            // Get the photo metadata.
+                            PhotoMetadata photoMetadata = place.getPhotoMetadatas().get(0);
+
+                            // Get the attribution text.
+                            String attributions = photoMetadata.getAttributions();
+
+                            // Create a FetchPhotoRequest.
+                            FetchPhotoRequest photoRequest = FetchPhotoRequest.builder(photoMetadata)
+                                    .setMaxWidth(500) // Optional.
+                                    .setMaxHeight(300) // Optional.
+                                    .build();
+                            placesClient.fetchPhoto(photoRequest).addOnSuccessListener((fetchPhotoResponse) -> {
+                                Bitmap bitmap = fetchPhotoResponse.getBitmap();
+                                imageView.setImageBitmap(bitmap);
+                            }).addOnFailureListener((exception) -> {
+                                if (exception instanceof ApiException) {
+                                    ApiException apiException = (ApiException) exception;
+                                    int statusCode = apiException.getStatusCode();
+                                    // Handle error with given status code.
+                                    Log.e(TAG, "Place not found: " + exception.getMessage());
+                                }
+                            });
+                        });
+
+
+/***************************************************************************/
                     }
 
                     @Override
